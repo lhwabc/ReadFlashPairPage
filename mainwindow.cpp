@@ -6,8 +6,8 @@
 QString PrePareFile;
 QString SaveFilename;
 int Sharepage[MAX_BLOCKUNIT][MAX_PLANE][2];
-int g_TotalBlockUnit;
-int g_TotalPlane;
+int g_TotalRowNum;
+int g_CellPerRow;
 int g_LowPageIndex[MAX_PAGE];
 int g_HighPageIndex[MAX_PAGE];
 int g_LowPageNum=0;
@@ -123,7 +123,7 @@ void MainWindow::GetTable(void)
 {
     SaveFile();
     QFile file(PrePareFile);
-    int BlockUnit=0;
+    int iRowNum=0;
     if(file.exists())
     {
         if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -139,41 +139,41 @@ void MainWindow::GetTable(void)
             if((list.count() != 4) && (list.count() != 8))
                 return;
 
-            g_TotalPlane =list.count()/2;
-            for(int Plane=0;Plane<g_TotalPlane;Plane++)
+            g_CellPerRow =list.count()/2;
+            for(int iCellNo=0;iCellNo<g_CellPerRow;iCellNo++)
             {
                 for(int i=0;i<2;i++)
                 {
-                    if(!isdigitstr(list.at(Plane*2+i).toLatin1().data()))
-                        Sharepage[BlockUnit][Plane][i] =int(-1);
+                    if(!isdigitstr(list.at(iCellNo*2+i).toLatin1().data()))
+                        Sharepage[iRowNum][iCellNo][i] =int(-1);
                     else
-                        Sharepage[BlockUnit][Plane][i] = list.at(Plane*2+i).toInt();
+                        Sharepage[iRowNum][iCellNo][i] = list.at(iCellNo*2+i).toInt();
                 }
             }
-            BlockUnit++;
+            iRowNum++;
         }
-        g_TotalBlockUnit = BlockUnit;
+        g_TotalRowNum = iRowNum;
     }
     else
     {
         qDebug("file no exists");
     }
     Debug_log(SaveFilename.toLatin1().data(),"Table Information.");
-    Debug_log(SaveFilename.toLatin1().data(),"g_TotalBlockUnit:%04d",g_TotalBlockUnit);
-    Debug_log(SaveFilename.toLatin1().data(),"g_TotalPlane:%04d",g_TotalPlane);
+    Debug_log(SaveFilename.toLatin1().data(),"g_TotalRowNum:%04d",g_TotalRowNum);
+    Debug_log(SaveFilename.toLatin1().data(),"g_CellPerRow:%04d",g_CellPerRow);
 
     char string[1024];
     char temp[1024];
     memset(string, 0, 1024);
 
 #ifndef wLowPageIndex
-    for(int blockunit=0;blockunit<g_TotalBlockUnit;blockunit++)
+    for(int iRowNum=0;iRowNum<g_TotalRowNum;iRowNum++)
     {
         memset(string, 0, 1024);
-        for(int iPlane=0;iPlane<g_TotalPlane;iPlane++)
+        for(int iCellNo=0;iCellNo<g_CellPerRow;iCellNo++)
         {
-            g_LowPageIndex[g_LowPageNum++] = Sharepage[blockunit][iPlane][LOWPAGEINDEX];
-            g_HighPageIndex[g_HighPageNum++] = Sharepage[blockunit][iPlane][HIGHPAGEINDEX];
+            g_LowPageIndex[g_LowPageNum++] = Sharepage[iRowNum][iCellNo][LOWPAGEINDEX];
+            g_HighPageIndex[g_HighPageNum++] = Sharepage[iRowNum][iCellNo][HIGHPAGEINDEX];
             //sprintf(temp," %d ",Sharepage[blockunit][iPlane][i]);
             //strcat(string, temp);
         }
@@ -198,22 +198,22 @@ void MainWindow::GetTable(void)
 #endif
 #ifndef bPairPageTable
     memset(g_PairPageTable, 0x00, sizeof(g_PairPageTable));
-    for(int blockunit=0;blockunit<g_TotalBlockUnit;blockunit++)
+    for(int iRowNo=0;iRowNo<g_TotalRowNum;iRowNo++)
     {
-        for(int iPlane=0;iPlane<g_TotalPlane;iPlane++)//1:HighPage 0:LowPage
+        for(int iCellNo=0;iCellNo<g_CellPerRow;iCellNo++)//1:HighPage 0:LowPage
         {
-            if(Sharepage[blockunit][iPlane][HIGHPAGEINDEX] !=(-1))
+            if(Sharepage[iRowNo][iCellNo][HIGHPAGEINDEX] !=(-1))
             {
                 int iByte=0;
                 char cBit=0;
-                iByte = Sharepage[blockunit][iPlane][HIGHPAGEINDEX] /8;
-                cBit  = Sharepage[blockunit][iPlane][HIGHPAGEINDEX] %8;
+                iByte = Sharepage[iRowNo][iCellNo][HIGHPAGEINDEX] /8;
+                cBit  = Sharepage[iRowNo][iCellNo][HIGHPAGEINDEX] %8;
                 g_PairPageTable[iByte] |= (1<<cBit);
             }
         }
     }
-    int TotalByte=(g_TotalBlockUnit*g_TotalPlane*2)/8;
-    if((g_TotalBlockUnit*g_TotalPlane*2)%8 != 0)
+    int TotalByte=(g_TotalRowNum*g_CellPerRow*2)/8;
+    if((g_TotalRowNum*g_CellPerRow*2)%8 != 0)
         TotalByte++;
     //qDebug("TotalByte:%d",TotalByte);
     memset(string, 0, 1024);
